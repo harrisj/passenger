@@ -23,6 +23,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/thread/mutex.hpp>
 #include <oxt/system_calls.hpp>
+#include <oxt/backtrace.hpp>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -146,6 +147,7 @@ private:
 		boost::mutex lock;
 		
 		~SharedData() {
+			TRACE_POINT();
 			int ret;
 			do {
 				ret = close(server);
@@ -180,6 +182,14 @@ private:
 		
 		virtual int getStream() const {
 			return fd;
+		}
+		
+		virtual void setReaderTimeout(unsigned int msec) {
+			MessageChannel(fd).setReadTimeout(msec);
+		}
+		
+		virtual void setWriterTimeout(unsigned int msec) {
+			MessageChannel(fd).setWriteTimeout(msec);
 		}
 		
 		virtual void shutdownReader() {
@@ -402,6 +412,7 @@ private:
 	 * @post serverSocket == -1 && serverPid == 0
 	 */
 	void shutdownServer() {
+		TRACE_POINT();
 		this_thread::disable_syscall_interruption dsi;
 		int ret;
 		time_t begin;
@@ -453,6 +464,7 @@ private:
 	 * @throw SystemException Something went wrong.
 	 */
 	void restartServer() {
+		TRACE_POINT();
 		int fds[2];
 		pid_t pid;
 		
@@ -507,6 +519,7 @@ private:
 	}
 	
 	void createStatusReportFIFO() {
+		TRACE_POINT();
 		char filename[PATH_MAX];
 		int ret;
 		
@@ -560,6 +573,7 @@ public:
 	  m_logFile(logFile),
 	  m_rubyCommand(rubyCommand),
 	  m_user(user) {
+		TRACE_POINT();
 		serverSocket = -1;
 		serverPid = 0;
 		this_thread::disable_syscall_interruption dsi;
@@ -567,7 +581,9 @@ public:
 	}
 	
 	~ApplicationPoolServer() {
+		TRACE_POINT();
 		if (serverSocket != -1) {
+			UPDATE_TRACE_POINT();
 			this_thread::disable_syscall_interruption dsi;
 			shutdownServer();
 		}
@@ -606,6 +622,7 @@ public:
 	 * @throws IOException Something went wrong.
 	 */
 	ApplicationPoolPtr connect() {
+		TRACE_POINT();
 		try {
 			this_thread::disable_syscall_interruption dsi;
 			MessageChannel channel(serverSocket);
@@ -640,6 +657,7 @@ public:
 	 * before calling detach().
 	 */
 	void detach() {
+		TRACE_POINT();
 		int ret;
 		do {
 			ret = close(serverSocket);

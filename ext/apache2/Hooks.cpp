@@ -17,18 +17,6 @@
  *  with this program; if not, write to the Free Software Foundation, Inc.,
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
-#include <ap_config.h>
-#include <httpd.h>
-#include <http_config.h>
-#include <http_core.h>
-#include <http_request.h>
-#include <http_protocol.h>
-#include <http_log.h>
-#include <util_script.h>
-#include <apr_pools.h>
-#include <apr_strings.h>
-#include <apr_lib.h>
-
 #include <boost/thread.hpp>
 
 #include <sys/time.h>
@@ -43,6 +31,20 @@
 #include "Logging.h"
 #include "ApplicationPoolServer.h"
 #include "MessageChannel.h"
+
+// The Apache/APR headers *must* come after the Boost headers, otherwise
+// compilation will fail on OpenBSD.
+#include <ap_config.h>
+#include <httpd.h>
+#include <http_config.h>
+#include <http_core.h>
+#include <http_request.h>
+#include <http_protocol.h>
+#include <http_log.h>
+#include <util_script.h>
+#include <apr_pools.h>
+#include <apr_strings.h>
+#include <apr_lib.h>
 
 using namespace std;
 using namespace Passenger;
@@ -709,6 +711,9 @@ public:
 			} catch (const BusyException &e) {
 				return reportBusyException(r);
 			}
+			
+			session->setReaderTimeout(r->server->timeout / 1000);
+			session->setWriterTimeout(r->server->timeout / 1000);
 			sendHeaders(r, session, mapper.getBaseURI());
 			if (expectingUploadData) {
 				if (uploadData != NULL) {
@@ -723,6 +728,7 @@ public:
 			apr_file_t *readerPipe = NULL;
 			int reader = session->getStream();
 			apr_os_pipe_put(&readerPipe, &reader, r->pool);
+			apr_file_pipe_timeout_set(readerPipe, r->server->timeout);
 
 			bb = apr_brigade_create(r->connection->pool, r->connection->bucket_alloc);
 			b = apr_bucket_pipe_create(readerPipe, r->connection->bucket_alloc);
@@ -754,7 +760,6 @@ public:
 			P_TRACE(3, "Unexpected error in mod_passenger: " <<
 				e.what() << "\n" << "  Backtrace:" << e.backtrace());
 			return HTTP_INTERNAL_SERVER_ERROR;
-		
 		} catch (const exception &e) {
 			P_TRACE(3, "Unexpected error in mod_passenger: " <<
 				e.what() << "\n" << "  Backtrace: not available");

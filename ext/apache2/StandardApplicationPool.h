@@ -659,13 +659,8 @@ public:
 	}
 	
 	virtual void clear() {
-<<<<<<< HEAD:ext/apache2/StandardApplicationPool.h
 		boost::mutex::scoped_lock l(lock);
-		apps.clear();
-=======
-		mutex::scoped_lock l(lock);
 		domains.clear();
->>>>>>> coreteam/experimental:ext/apache2/StandardApplicationPool.h
 		inactiveApps.clear();
 		restartFileTimes.clear();
 		appInstanceCount.clear();

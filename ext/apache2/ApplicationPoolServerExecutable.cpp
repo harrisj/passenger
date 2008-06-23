@@ -396,12 +396,8 @@ private:
 			throw;
 		}
 		
-<<<<<<< HEAD:ext/apache2/ApplicationPoolServerExecutable.cpp
-		boost::mutex::scoped_lock l(server.lock);
-=======
 		UPDATE_TRACE_POINT();
-		mutex::scoped_lock l(server.lock);
->>>>>>> coreteam/experimental:ext/apache2/ApplicationPoolServerExecutable.cpp
+		boost::mutex::scoped_lock l(server.lock);
 		ClientPtr myself(self.lock());
 		if (myself != NULL) {
 			server.clients.erase(myself);
@@ -509,12 +505,8 @@ Server::start() {
 			ClientPtr client(new Client(*this, fds[0]));
 			pair<set<ClientPtr>::iterator, bool> p;
 			{
-<<<<<<< HEAD:ext/apache2/ApplicationPoolServerExecutable.cpp
-				boost::mutex::scoped_lock l(lock);
-=======
 				UPDATE_TRACE_POINT();
-				mutex::scoped_lock l(lock);
->>>>>>> coreteam/experimental:ext/apache2/ApplicationPoolServerExecutable.cpp
+				boost::mutex::scoped_lock l(lock);
 				clients.insert(client);
 			}
 			UPDATE_TRACE_POINT();

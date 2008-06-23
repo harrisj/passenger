@@ -33,6 +33,11 @@
 #include <errno.h>
 #include <unistd.h>
 #include <cstdarg>
+#ifdef __OpenBSD__
+	// OpenBSD needs this for 'struct iovec'. Apparently it isn't
+	// always included by unistd.h and sys/types.h.
+	#include <sys/uio.h>
+#endif
 
 #include "Exceptions.h"
 #include "Utils.h"
@@ -101,6 +106,11 @@ class MessageChannel {
 private:
 	const static char DELIMITER = '\0';
 	int fd;
+	
+	#ifdef __OpenBSD__
+		typedef u_int32_t uint32_t;
+		typedef u_int16_t uint16_t;
+	#endif
 
 public:
 	/**
@@ -495,6 +505,57 @@ public:
 		#else
 			return *((int *) CMSG_DATA(control_header));
 		#endif
+	}
+	
+	/**
+	 * Set the timeout value for reading data from this channel.
+	 * If no data can be read within the timeout period, then a
+	 * SystemException will be thrown by one of the read methods,
+	 * with error code EAGAIN or EWOULDBLOCK.
+	 *
+	 * @param msec The timeout, in milliseconds. If 0 is given,
+	 *             there will be no timeout.
+	 * @throws SystemException Cannot set the timeout.
+	 */
+	void setReadTimeout(unsigned int msec) {
+		// See the comment for setWriteTimeout().
+		struct timeval tv;
+		int ret;
+		
+		tv.tv_sec = msec / 1000;
+		tv.tv_usec = msec % 1000 * 1000;
+		ret = syscalls::setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO,
+			&tv, sizeof(tv));
+		if (ret == -1) {
+			throw SystemException("Cannot set read timeout for socket", errno);
+		}
+	}
+	
+	/**
+	 * Set the timeout value for writing data to this channel.
+	 * If no data can be written within the timeout period, then a
+	 * SystemException will be thrown, with error code EAGAIN or
+	 * EWOULDBLOCK.
+	 *
+	 * @param msec The timeout, in milliseconds. If 0 is given,
+	 *             there will be no timeout.
+	 * @throws SystemException Cannot set the timeout.
+	 */
+	void setWriteTimeout(unsigned int msec) {
+		// People say that SO_RCVTIMEO/SO_SNDTIMEO are unreliable and
+		// not well-implemented on all platforms.
+		// http://www.developerweb.net/forum/archive/index.php/t-3439.html
+		// That's why we use APR's timeout facilities as well (see Hooks.cpp).
+		struct timeval tv;
+		int ret;
+		
+		tv.tv_sec = msec / 1000;
+		tv.tv_usec = msec % 1000 * 1000;
+		ret = syscalls::setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO,
+			&tv, sizeof(tv));
+		if (ret == -1) {
+			throw SystemException("Cannot set read timeout for socket", errno);
+		}
 	}
 };
 
